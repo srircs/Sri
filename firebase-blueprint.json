@@ -1,0 +1,183 @@
+{
+  "entities": {
+    "Admin": {
+      "title": "Admin",
+      "description": "System administrator document identifying authorized single Admin",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 120 },
+        "role": { "type": "string", "enum": ["admin"] },
+        "createdAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile containing authentication and organizational identity",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "username": { "type": "string", "maxLength": 50 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 120 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "role": { "type": "string", "enum": ["admin", "staff"] },
+        "isActive": { "type": "boolean" },
+        "passwordHash": { "type": "string", "maxLength": 256 },
+        "passwordSalt": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 50 },
+        "updatedAt": { "type": "string", "maxLength": 50 },
+        "lastLoginAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["uid", "username", "displayName", "role", "isActive"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "Business prospect record with contact details and follow-up schedules",
+      "type": "object",
+      "properties": {
+        "leadId": { "type": "string", "maxLength": 30 },
+        "companyName": { "type": "string", "maxLength": 150 },
+        "contactPerson": { "type": "string", "maxLength": 100 },
+        "mobileNumber": { "type": "string", "maxLength": 25 },
+        "alternatePhone": { "type": "string", "maxLength": 25 },
+        "email": { "type": "string", "maxLength": 120 },
+        "businessCategory": { "type": "string", "maxLength": 100 },
+        "cityArea": { "type": "string", "maxLength": 100 },
+        "fullAddress": { "type": "string", "maxLength": 300 },
+        "website": { "type": "string", "maxLength": 150 },
+        "leadSource": {
+          "type": "string",
+          "enum": ["Website", "Referral", "IndiaMART", "Cold Call", "Exhibition", "WhatsApp", "Other"]
+        },
+        "requirement": { "type": "string", "maxLength": 500 },
+        "priority": { "type": "string", "enum": ["High", "Medium", "Low"] },
+        "assignedStaffId": { "type": "string", "maxLength": 128 },
+        "assignedStaffName": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "maxLength": 50 },
+        "lastContactDate": { "type": "string", "maxLength": 50 },
+        "lastCallOutcome": { "type": "string", "maxLength": 100 },
+        "nextFollowUpDate": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string", "maxLength": 50 },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "createdByName": { "type": "string", "maxLength": 100 },
+        "updatedAt": { "type": "string", "maxLength": 50 },
+        "additionalNotes": { "type": "string", "maxLength": 1000 }
+      },
+      "required": ["leadId", "companyName", "contactPerson", "mobileNumber", "priority", "status", "leadSource"]
+    },
+    "CallActivity": {
+      "title": "CallActivity",
+      "description": "Historical sales call logging record with notes and outcome",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "leadDocId": { "type": "string", "maxLength": 128 },
+        "leadCode": { "type": "string", "maxLength": 30 },
+        "companyName": { "type": "string", "maxLength": 150 },
+        "contactPerson": { "type": "string", "maxLength": 100 },
+        "mobileNumber": { "type": "string", "maxLength": 25 },
+        "staffId": { "type": "string", "maxLength": 128 },
+        "staffName": { "type": "string", "maxLength": 100 },
+        "callDateTime": { "type": "string", "maxLength": 50 },
+        "callOutcome": { "type": "string", "maxLength": 100 },
+        "customerResponse": { "type": "string", "maxLength": 500 },
+        "discussionSummary": { "type": "string", "maxLength": 1000 },
+        "customerRequirement": { "type": "string", "maxLength": 500 },
+        "interestLevel": { "type": "string", "enum": ["High", "Medium", "Low", "None"] },
+        "previousStatus": { "type": "string", "maxLength": 50 },
+        "updatedStatus": { "type": "string", "maxLength": 50 },
+        "nextFollowUpDate": { "type": "string", "maxLength": 50 },
+        "nextAction": { "type": "string", "maxLength": 300 },
+        "additionalNotes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "leadDocId", "staffId", "callOutcome", "callDateTime"]
+    },
+    "FollowUp": {
+      "title": "FollowUp",
+      "description": "Scheduled customer follow-up appointment or reminder",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "leadDocId": { "type": "string", "maxLength": 128 },
+        "leadCode": { "type": "string", "maxLength": 30 },
+        "companyName": { "type": "string", "maxLength": 150 },
+        "contactPerson": { "type": "string", "maxLength": 100 },
+        "mobileNumber": { "type": "string", "maxLength": 25 },
+        "assignedStaffId": { "type": "string", "maxLength": 128 },
+        "assignedStaffName": { "type": "string", "maxLength": 100 },
+        "dueDate": { "type": "string", "maxLength": 50 },
+        "dueTime": { "type": "string", "maxLength": 20 },
+        "status": { "type": "string", "enum": ["pending", "completed", "missed"] },
+        "notes": { "type": "string", "maxLength": 500 },
+        "completedAt": { "type": "string", "maxLength": 50 },
+        "completedBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "leadDocId", "assignedStaffId", "dueDate", "status"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable security and activity audit entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "actorId": { "type": "string", "maxLength": 128 },
+        "actorName": { "type": "string", "maxLength": 100 },
+        "actorRole": { "type": "string", "enum": ["admin", "staff", "system"] },
+        "action": { "type": "string", "maxLength": 100 },
+        "targetType": { "type": "string", "maxLength": 50 },
+        "targetId": { "type": "string", "maxLength": 128 },
+        "targetSummary": { "type": "string", "maxLength": 200 },
+        "details": { "type": "string", "maxLength": 1000 },
+        "timestamp": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "actorId", "action", "targetType", "timestamp"]
+    },
+    "SystemSetting": {
+      "title": "SystemSetting",
+      "description": "Application configurations such as configurable lead statuses and company preferences",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 50 },
+        "settingKey": { "type": "string", "maxLength": 50 },
+        "data": { "type": "object", "description": "Arbitrary configuration map" },
+        "updatedBy": { "type": "string", "maxLength": 128 },
+        "updatedAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "settingKey"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Stores single verified admin identification"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles for administrator and sales staff"
+    },
+    "/leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Enterprise customer leads and sales pipeline items"
+    },
+    "/call_activities/{activityId}": {
+      "schema": "CallActivity",
+      "description": "Logged phone call attempts, conversation summaries, and outcomes"
+    },
+    "/follow_ups/{followUpId}": {
+      "schema": "FollowUp",
+      "description": "Scheduled sales call and visit follow-ups"
+    },
+    "/audit_logs/{auditId}": {
+      "schema": "AuditLog",
+      "description": "Immutable security and activity audit records"
+    },
+    "/system_settings/{settingId}": {
+      "schema": "SystemSetting",
+      "description": "Global company settings and customizable status lists"
+    }
+  }
+}

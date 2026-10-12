@@ -1,0 +1,165 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all unknown collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Single trusted Admin check:
+    // 1. Explicit document in /admins/{uid}
+    // 2. OR verified email matches system bootstrap admin (rcssri14@gmail.com)
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email == "rcssri14@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isValidLead(data) {
+      return data.keys().hasAll(['leadId', 'companyName', 'contactPerson', 'mobileNumber', 'priority', 'status', 'leadSource']) &&
+        data.companyName is string && data.companyName.size() > 0 && data.companyName.size() <= 150 &&
+        data.contactPerson is string && data.contactPerson.size() > 0 && data.contactPerson.size() <= 100 &&
+        data.mobileNumber is string && data.mobileNumber.size() >= 7 && data.mobileNumber.size() <= 25 &&
+        data.priority in ['High', 'Medium', 'Low'] &&
+        data.leadSource in ['Website', 'Referral', 'IndiaMART', 'Cold Call', 'Exhibition', 'WhatsApp', 'Other'] &&
+        data.status is string && data.status.size() <= 50;
+    }
+
+    function isValidCallActivity(data) {
+      return data.keys().hasAll(['id', 'leadDocId', 'staffId', 'callOutcome', 'callDateTime']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.leadDocId is string && data.leadDocId.size() <= 128 &&
+        data.staffId is string && data.staffId.size() <= 128 &&
+        data.callOutcome is string && data.callOutcome.size() <= 100 &&
+        data.callDateTime is string && data.callDateTime.size() <= 50;
+    }
+
+    function isValidFollowUp(data) {
+      return data.keys().hasAll(['id', 'leadDocId', 'assignedStaffId', 'dueDate', 'status']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.leadDocId is string && data.leadDocId.size() <= 128 &&
+        data.assignedStaffId is string && data.assignedStaffId.size() <= 128 &&
+        data.dueDate is string && data.dueDate.size() <= 50 &&
+        data.status in ['pending', 'completed', 'missed'];
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['id', 'actorId', 'action', 'targetType', 'timestamp']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.actorId is string && data.actorId.size() <= 128 &&
+        data.action is string && data.action.size() <= 100 &&
+        data.targetType is string && data.targetType.size() <= 50;
+    }
+
+    // Admins Collection
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && (
+        (request.auth.uid == adminId && request.auth.token.email == "rcssri14@gmail.com") ||
+        isAdmin()
+      );
+      allow update, delete: if false;
+    }
+
+    // User Profiles (Admin & Staff)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isAdmin() || (isSignedIn() && request.auth.uid == userId));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow create: if isValidId(userId) && (
+        isAdmin() ||
+        (isSignedIn() && request.auth.uid == userId && (request.auth.token.email == "rcssri14@gmail.com" || incoming().role == 'staff'))
+      );
+      allow update: if isValidId(userId) && (
+        isAdmin() ||
+        (isSignedIn() && request.auth.uid == userId &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'phone', 'lastLoginAt', 'passwordHash', 'passwordSalt', 'updatedAt']))
+      );
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // Leads Collection
+    match /leads/{leadId} {
+      allow get: if isValidId(leadId) && (isAdmin() || (isSignedIn() && resource.data.assignedStaffId == request.auth.uid));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.assignedStaffId == request.auth.uid);
+      // ONLY Admin can create new leads (requirement 2 & 3)
+      allow create: if isValidId(leadId) && isAdmin() && isValidLead(incoming());
+      // Admin can update all fields; Staff can only update allowed sales progression fields on their assigned leads
+      allow update: if isValidId(leadId) && (
+        (isAdmin() && isValidLead(incoming())) ||
+        (
+          isSignedIn() &&
+          existing().assignedStaffId == request.auth.uid &&
+          incoming().assignedStaffId == existing().assignedStaffId &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'status', 'lastContactDate', 'lastCallOutcome', 'nextFollowUpDate', 'updatedAt', 'additionalNotes'
+          ]) &&
+          isValidLead(incoming())
+        )
+      );
+      // ONLY Admin can delete leads
+      allow delete: if isValidId(leadId) && isAdmin();
+    }
+
+    // Call Activities Collection (Append-only for staff, permanent audit trails)
+    match /call_activities/{activityId} {
+      allow get: if isValidId(activityId) && (isAdmin() || (isSignedIn() && resource.data.staffId == request.auth.uid));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.staffId == request.auth.uid);
+      allow create: if isValidId(activityId) && isSignedIn() &&
+        (isAdmin() || incoming().staffId == request.auth.uid) &&
+        isValidCallActivity(incoming());
+      // Staff cannot alter past calls once logged; Admin can moderate if needed
+      allow update: if isValidId(activityId) && isAdmin() && isValidCallActivity(incoming());
+      allow delete: if isValidId(activityId) && isAdmin();
+    }
+
+    // Follow-ups Collection
+    match /follow_ups/{followUpId} {
+      allow get: if isValidId(followUpId) && (isAdmin() || (isSignedIn() && resource.data.assignedStaffId == request.auth.uid));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.assignedStaffId == request.auth.uid);
+      allow create: if isValidId(followUpId) && isSignedIn() &&
+        (isAdmin() || incoming().assignedStaffId == request.auth.uid) &&
+        isValidFollowUp(incoming());
+      allow update: if isValidId(followUpId) && (
+        isAdmin() ||
+        (
+          isSignedIn() &&
+          existing().assignedStaffId == request.auth.uid &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'completedAt', 'completedBy', 'notes'])
+        )
+      ) && isValidFollowUp(incoming());
+      allow delete: if isValidId(followUpId) && isAdmin();
+    }
+
+    // Audit Logs Collection (strictly append-only, no update, no delete)
+    match /audit_logs/{auditId} {
+      allow get: if isValidId(auditId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(auditId) && isSignedIn() && isValidAuditLog(incoming());
+      allow update, delete: if false;
+    }
+
+    // System Settings (Statuses pipeline, company preferences)
+    match /system_settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

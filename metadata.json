@@ -1,0 +1,6 @@
+{
+  "name": "Sri Groups ERP & CRM",
+  "description": "Enterprise lead management, staff sales activities, call logging, and lead conversion pipeline for Sri Groups.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
